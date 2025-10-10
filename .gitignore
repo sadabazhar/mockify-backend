@@ -4,7 +4,17 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
-### STS ###
+### Eclipse ###
+.metadata
+bin/
+tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+
+### STS (Spring Tool Suite) ###
 .apt_generated
 .classpath
 .factorypath
@@ -31,3 +41,32 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Logs ###
+*.log
+*.out
+*.err
+
+### OS Files ###
+.DS_Store
+Thumbs.db
+
+### Build Artifacts ###
+*.war
+*.ear
+*.jar
+
+### Docker ###
+*.pid
+.env
+docker-compose.override.yml
+
+### Reports ###
+/surefire-reports/
+/jacoco.exec
+/jacoco-report/
+
+### Local DB ###
+*.h2.db
+*.mv.db
+*.db
