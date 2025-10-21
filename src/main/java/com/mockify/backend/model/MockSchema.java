@@ -2,11 +2,13 @@
 package com.mockify.backend.model;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Map;
@@ -14,7 +16,8 @@ import java.util.Set;
 
 @Entity
 @Table(name = "mock_schemas")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class MockSchema {
@@ -25,6 +28,7 @@ public class MockSchema {
     @Column(nullable = false)
     private String name;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id")
     private Project project;
@@ -36,6 +40,7 @@ public class MockSchema {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "mockSchema", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<MockRecord> mockRecords = new HashSet<>();
 
