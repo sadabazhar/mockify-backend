@@ -1,7 +1,6 @@
-package com.mockify.backend.dto;
+package com.mockify.backend.dto.response.auth;
 
 import lombok.*;
-
 import java.time.LocalDateTime;
 
 @Getter
@@ -9,10 +8,8 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString
-public class OrganizationDTO {
+public class UserResponse {
     private Long id;
-    private String name;
-    private Long ownerId; // Only expose owner ID, not full object info
+    private String email;
     private LocalDateTime createdAt;
 }
