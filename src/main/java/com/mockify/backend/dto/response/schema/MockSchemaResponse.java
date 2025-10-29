@@ -1,20 +1,17 @@
-package com.mockify.backend.dto;
+package com.mockify.backend.dto.response.schema;
 
 import lombok.*;
-
 import java.time.LocalDateTime;
-import java.util.Map;
 
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString
-public class MockSchemaDTO {
+public class MockSchemaResponse {
     private Long id;
     private String name;
     private Long projectId;
-    private Map<String, Object> schemaJson;
+    private String schemaDefinition;
     private LocalDateTime createdAt;
 }

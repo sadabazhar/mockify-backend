@@ -1,7 +1,6 @@
-package com.mockify.backend.dto;
+package com.mockify.backend.dto.response.project;
 
 import lombok.*;
-
 import java.time.LocalDateTime;
 
 @Getter
@@ -9,8 +8,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString
-public class ProjectDTO {
+public class ProjectResponse {
     private Long id;
     private String name;
     private Long organizationId;
