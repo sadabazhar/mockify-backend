@@ -1,7 +1,9 @@
 package com.mockify.backend.mapper;
 
 import com.mockify.backend.model.MockSchema;
-import com.mockify.backend.dto.MockSchemaDTO;
+import com.mockify.backend.dto.request.schema.CreateMockSchemaRequest;
+import com.mockify.backend.dto.request.schema.UpdateMockSchemaRequest;
+import com.mockify.backend.dto.response.schema.MockSchemaResponse;
 import org.mapstruct.*;
 
 import java.util.List;
@@ -9,25 +11,18 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface MockSchemaMapper {
 
-    // Converts MockSchema entity to MockSchemaDTO for API responses
-    MockSchemaDTO toDto(MockSchema schema);
+    // Entity → Response
+    MockSchemaResponse toResponse(MockSchema schema);
+    List<MockSchemaResponse> toResponseList(List<MockSchema> schemas);
 
-    // Converts List of MockSchema entities to List of MockSchemaDTO
-    List<MockSchemaDTO> toDtoList(List<MockSchema> schemas);
+    // Create Request → Entity
+    MockSchema toEntity(CreateMockSchemaRequest request);
 
-    // Converts MockSchemaDTO to MockSchema entity
-    MockSchema toEntity(MockSchemaDTO dto);
-
-    // Converts List of MockSchemaDTO to List of MockSchema entities
-    List<MockSchema> toEntityList(List<MockSchemaDTO> dtos);
-
-    /*
-        Updates an existing MockSchema entity with non-null values from DTO.
-        Ignores null values, keeps id, createdAt, and project unchanged.
-     */
+    // Update Request -> Entity
+    // Updates existing entity with only non-null fields
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "project", ignore = true)
-    void updateMockSchemaFromDto(MockSchemaDTO dto, @MappingTarget MockSchema entity);
+    @Mapping(target = "createdAt", ignore = true)
+    void updateEntityFromRequest(UpdateMockSchemaRequest request, @MappingTarget MockSchema entity);
 }
