@@ -11,11 +11,16 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface MockSchemaMapper {
 
-    // Entity → Response
+    // Entity -> Response
+    @Mapping(source = "project.id", target = "projectId")
     MockSchemaResponse toResponse(MockSchema schema);
     List<MockSchemaResponse> toResponseList(List<MockSchema> schemas);
 
-    // Create Request → Entity
+    // Create Request -> Entity
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "project", ignore = true)
+    @Mapping(target = "mockRecords", ignore = true)
     MockSchema toEntity(CreateMockSchemaRequest request);
 
     // Update Request -> Entity
@@ -24,5 +29,6 @@ public interface MockSchemaMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "project", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "mockRecords", ignore = true)
     void updateEntityFromRequest(UpdateMockSchemaRequest request, @MappingTarget MockSchema entity);
 }

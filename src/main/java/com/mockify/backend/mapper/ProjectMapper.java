@@ -16,6 +16,9 @@ public interface ProjectMapper {
     List<ProjectResponse> toResponseList(List<Project> projects);
 
     // Create Request -> Entity
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "organization", ignore = true)
     Project toEntity(CreateProjectRequest request);
 
     // Update Request -> Entity

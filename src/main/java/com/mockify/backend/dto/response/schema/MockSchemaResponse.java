@@ -2,6 +2,7 @@ package com.mockify.backend.dto.response.schema;
 
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @Getter
 @Setter
@@ -12,6 +13,6 @@ public class MockSchemaResponse {
     private Long id;
     private String name;
     private Long projectId;
-    private String schemaDefinition;
+    private Map<String, Object> schemaJson;
     private LocalDateTime createdAt;
 }
