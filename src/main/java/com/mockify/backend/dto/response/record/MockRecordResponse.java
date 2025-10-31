@@ -2,6 +2,7 @@ package com.mockify.backend.dto.response.record;
 
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @Getter
 @Setter
@@ -11,7 +12,7 @@ import java.time.LocalDateTime;
 public class MockRecordResponse {
     private Long id;
     private Long schemaId;
-    private String data;
+    private Map<String, Object> data;
     private LocalDateTime createdAt;
     private LocalDateTime expiresAt;
 }

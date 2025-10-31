@@ -12,10 +12,15 @@ import java.util.List;
 public interface MockRecordMapper {
 
     // Entity -> Response
+    @Mapping(source = "mockSchema.id", target = "schemaId")
     MockRecordResponse toResponse(MockRecord record);
     List<MockRecordResponse> toResponseList(List<MockRecord> records);
 
     // Create Request -> Entity
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "mockSchema", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "expiresAt", ignore = true)
     MockRecord toEntity(CreateMockRecordRequest request);
 
     // Update Request -> Entity

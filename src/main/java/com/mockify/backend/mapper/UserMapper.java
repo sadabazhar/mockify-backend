@@ -14,6 +14,9 @@ public interface UserMapper {
     List<UserResponse> toResponseList(List<User> users);
 
     // Create Request -> Entity
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "organizations", ignore = true)
     User toEntity(RegisterRequest request);
 }
 
