@@ -3,6 +3,7 @@ package com.mockify.backend.security;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -18,8 +19,13 @@ public class JwtTokenProvider {
     @Value("${jwt.secret}")
     private String jwtSecret;
 
-    @Value("${jwt.expiration}")
-    private long jwtExpiration;
+    // Get expiration time for access tokens
+    @Getter
+    @Value("${jwt.access.expiration}")
+    private long accessTokenExpiration;
+
+    @Value("${jwt.refresh.expiration}")
+    private long refreshTokenExpiration;
 
     // Generate signing key from secret
     private SecretKey getSigningKey() {
@@ -27,10 +33,20 @@ public class JwtTokenProvider {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    // Generate JWT token for a user
-    public String generateToken(Long userId) {
+    // Generate JWT access token for a user
+    public String generateAccessToken(Long userId) {
+        return generateToken(userId, accessTokenExpiration, "access");
+    }
+
+    // Generate JWT refresh token for a user
+    public String generateRefreshToken(Long userId) {
+        return generateToken(userId, refreshTokenExpiration, "refresh");
+    }
+
+    // Token generation core logic
+    private String generateToken(Long userId, long expiration, String tokenType) {
         Date now = new Date();
-        Date expirationTime = new Date(now.getTime() + jwtExpiration);
+        Date expirationTime = new Date(now.getTime() + expiration);
 
         return Jwts.builder()
                 .subject(String.valueOf(userId))
@@ -40,7 +56,7 @@ public class JwtTokenProvider {
                 .expiration(expirationTime)
                 .notBefore(now)
                 .id(UUID.randomUUID().toString())
-                .claim("type", "access")
+                .claim("type", tokenType)
                 .signWith(getSigningKey())
                 .compact();
     }
@@ -65,16 +81,24 @@ public class JwtTokenProvider {
         }
     }
 
+    public boolean validateRefreshToken(String token) {
+        return validateToken(token, "refresh");
+    }
+
+    public boolean validateAccessToken(String token) {
+        return validateToken(token, "access");
+    }
+
     // Core Validation method
     // JJWT parser automatically validates: signature, expiration, notBefore
-    public boolean validateToken(String token) {
+    public boolean validateToken(String token, String expectedType) {
         try {
             Claims claims = getAllClaims(token);
 
-            // Check token type for access token
+            // Check token type
             String type = claims.get("type", String.class);
-            if (!"access".equals(type)) {
-                log.warn("Invalid token type: {}", type);
+            if (!expectedType.equals(type)) {
+                log.warn("Invalid token type: expected {}, got {}", expectedType, type);
                 return false;
             }
 

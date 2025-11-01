@@ -1,6 +1,7 @@
 package com.mockify.backend.controller;
 
 import com.mockify.backend.dto.request.auth.LoginRequest;
+import com.mockify.backend.dto.request.auth.RefreshTokenRequest;
 import com.mockify.backend.dto.request.auth.RegisterRequest;
 import com.mockify.backend.dto.response.auth.AuthResponse;
 import com.mockify.backend.dto.response.auth.UserResponse;
@@ -52,8 +53,10 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
-    //    @PostMapping("/refresh")
-    //    @PostMapping("/change-password")
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
+        return ResponseEntity.ok(authService.refreshToken(request));
+    }
 }
 
 

@@ -1,6 +1,7 @@
 package com.mockify.backend.service;
 
 import com.mockify.backend.dto.request.auth.LoginRequest;
+import com.mockify.backend.dto.request.auth.RefreshTokenRequest;
 import com.mockify.backend.dto.request.auth.RegisterRequest;
 import com.mockify.backend.dto.response.auth.AuthResponse;
 import com.mockify.backend.dto.response.auth.UserResponse;
@@ -19,9 +20,9 @@ public interface AuthService {
     // Logout user and invalidate tokens
     void logout();
 
-//     Refresh access token using refresh token
-//  AuthResponse refreshToken(String refreshToken);
-//
+    // Refresh access_token using refresh_token
+    AuthResponse refreshToken(RefreshTokenRequest refreshToken);
+
 //     Change current user's password
 //  void changePassword(String oldPassword, String newPassword);
 

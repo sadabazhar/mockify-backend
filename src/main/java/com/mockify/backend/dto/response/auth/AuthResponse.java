@@ -1,5 +1,6 @@
 package com.mockify.backend.dto.response.auth;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 
 @Getter
@@ -9,19 +10,18 @@ import lombok.*;
 @Builder
 public class AuthResponse {
 
-    private String status;
-    private String message;
-    private TokenInfo tokens;
-    private UserResponse user;
+    @JsonProperty("access_token")
+    private String accessToken;
 
-    @Getter
-    @Setter
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class TokenInfo {
-        private String accessToken;
-        private String tokenType;
-        private Long expiresIn;
-    }
+    @JsonProperty("refresh_token")
+    private String refreshToken;
+
+    @JsonProperty("token_type")
+    private String tokenType;
+
+    @JsonProperty("expires_in")
+    private Long expiresIn;
+
+    @JsonProperty("user")
+    private UserResponse user;
 }
