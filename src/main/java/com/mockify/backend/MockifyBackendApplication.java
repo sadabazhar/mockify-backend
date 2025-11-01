@@ -18,6 +18,10 @@ public class MockifyBackendApplication {
 		System.setProperty("DB_USER", dotenv.get("DB_USER"));
 		System.setProperty("DB_PASS", dotenv.get("DB_PASS"));
 
+		// Inject JWT credentials from .env
+		System.setProperty("JWT_SECRET", dotenv.get("JWT_SECRET"));
+		System.setProperty("JWT_EXPIRATION", dotenv.get("JWT_EXPIRATION"));
+
 		// Log message to confirm environment variables were loaded successfully
 		System.out.println("Environment variables loaded");
 		SpringApplication.run(MockifyBackendApplication.class, args);
