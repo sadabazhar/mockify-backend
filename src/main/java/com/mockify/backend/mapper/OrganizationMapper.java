@@ -12,10 +12,15 @@ import java.util.List;
 public interface OrganizationMapper {
 
     // Entity -> Response
+    @Mapping(source = "owner.id", target = "ownerId")
     OrganizationResponse toResponse(Organization organization);
     List<OrganizationResponse> toResponseList(List<Organization> organizations);
 
     // Create Request -> Entity
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "owner", ignore = true)
+    @Mapping(target = "projects", ignore = true)
     Organization toEntity(CreateOrganizationRequest request);
 
     // Update Request -> Entity
@@ -24,6 +29,7 @@ public interface OrganizationMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "owner", ignore = true)
+    @Mapping(target = "projects", ignore = true)
     void updateEntityFromRequest(UpdateOrganizationRequest request, @MappingTarget Organization entity);
 }
 
