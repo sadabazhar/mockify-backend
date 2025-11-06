@@ -1,0 +1,18 @@
+version: "3.8"
+
+services:
+  mockify-postgres:
+    image: postgres:16
+    container_name: mockify_postgres_local
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mockifydb
+    ports:
+      - "5432:5432"
+    volumes:
+      - mockify_data:/var/lib/postgresql/data
+
+volumes:
+  mockify_data:
