@@ -29,6 +29,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final UserMapper userMapper;
 
+    @Override
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         log.info("Registering new user with email: {}", request.getEmail());
@@ -63,6 +64,7 @@ public class AuthServiceImpl implements AuthService {
         return response;
     }
 
+    @Override
     @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest request) {
         log.info("Login attempt for email: {}", request.getEmail());
@@ -136,6 +138,7 @@ public class AuthServiceImpl implements AuthService {
         return response;
     }
 
+    @Override
     @Transactional(readOnly = true)
     public UserResponse getCurrentUser(Long userId) {
         User user = userRepository.findById(userId)
@@ -143,6 +146,7 @@ public class AuthServiceImpl implements AuthService {
         return userMapper.toResponse(user);
     }
 
+    @Override
     public void logout() {
         // Stateless logout: just discard tokens client-side
         System.out.println("User logging out.");
