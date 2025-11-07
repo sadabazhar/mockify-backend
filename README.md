@@ -29,7 +29,7 @@ DB_PASS=postgres
 ```
 3. Start the local PostgreSQL container:
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 Flyway will automatically create and migrate the schema when you start the Spring Boot app.
 
