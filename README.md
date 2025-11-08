@@ -15,6 +15,25 @@ git clone https://github.com/<your-username>/mockify-backend.git
 cd mockify-backend
 ```
 
+### Step 3: Set Up Local PostgreSQL (for Development)
+
+We use Docker and Flyway to ensure every developer has the same schema and data.
+
+1. Make sure Docker is installed and running.
+
+2. Check your .env file has these values:
+```
+DB_URL=jdbc:postgresql://localhost:5432/mockifydb
+DB_USER=postgres
+DB_PASS=postgres
+```
+3. Start the local PostgreSQL container:
+```bash
+docker compose up -d
+```
+Flyway will automatically create and migrate the schema when you start the Spring Boot app.
+
+
 ### Step 3: Create a new branch for your work
 
 ```bash
