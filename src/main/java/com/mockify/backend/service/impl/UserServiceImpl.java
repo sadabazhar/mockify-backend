@@ -57,10 +57,10 @@ public class UserServiceImpl implements UserService {
     @Override
     public void deleteUser(Long id) {
         log.info("Deleting user with ID: {}", id);
-        userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Cannot delete, User not found with id: " + id));
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Cannot delete, User not found with ID: " + id));
 
-        userRepository.deleteById(id);
+        userRepository.delete(user);
         log.info("User deleted successfully: {}", id);
     }
 
