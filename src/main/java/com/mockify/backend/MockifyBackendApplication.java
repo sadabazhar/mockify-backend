@@ -19,7 +19,6 @@ public class MockifyBackendApplication {
 		System.setProperty("DB_URL", dotenv.get("DB_URL"));
 		System.setProperty("DB_USER", dotenv.get("DB_USER"));
 		System.setProperty("DB_PASS", dotenv.get("DB_PASS"));
-		System.setProperty("DB_NAME", dotenv.get("DB_NAME"));
 
 		// Inject JWT credentials from .env
 		System.setProperty("JWT_SECRET", dotenv.get("JWT_SECRET"));

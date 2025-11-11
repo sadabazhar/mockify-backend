@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/mockify
+    username: mockify_user
+    password: mockify_password
+
+  jpa:
+    show-sql: true
+
+  docker:
+    compose:
+      enabled: true
+
+jwt:
+  secret: ${JWT_SECRET:local-super-secret-key-1234567890}
+  access:
+    expiration: 300000
+  refresh:
+    expiration: 3600000
