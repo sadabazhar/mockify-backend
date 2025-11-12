@@ -11,19 +11,19 @@ import java.util.Optional;
 public interface OrganizationService {
 
     // Create new organization under current user
-    OrganizationResponse createOrganization(CreateOrganizationRequest request);
+    OrganizationResponse createOrganization(Long userId, CreateOrganizationRequest request);
 
     // Fetch organization details by ID
     OrganizationResponse getOrganizationById(Long orgId);
 
     // Get all organizations owned by current user
-    List<OrganizationResponse> getMyOrganizations();
+    List<OrganizationResponse> getMyOrganizations(Long userId);
 
     // Update organization name or details
-    OrganizationResponse updateOrganization(Long orgId, UpdateOrganizationRequest request);
+    OrganizationResponse updateOrganization(Long userId, Long orgId, UpdateOrganizationRequest request);
 
     // Delete organization (and optionally its related projects)
-    void deleteOrganization(Long orgId);
+    void deleteOrganization(Long userId, Long orgId);
 
     // Count total organizations in system
     long countOrganizations();
