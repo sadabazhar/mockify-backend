@@ -9,81 +9,91 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/projects")
+@RequestMapping("/api/v1")
 @RequiredArgsConstructor
 @Slf4j
 public class ProjectController {
 
     private final ProjectService projectService;
 
-    // 🔹 Create a new project under an organization
-    @PostMapping
+    //  Create a new project under an organization
+    @PostMapping("/projects")
     public ResponseEntity<ProjectResponse> createProject(
-            @RequestHeader("userId") Long userId,
-            @Valid @RequestBody CreateProjectRequest request) {
+            @Valid @RequestBody CreateProjectRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
 
-        log.info("User ID {}: Creating new project '{}' for organization ID {}",
-                userId, request.getName(), request.getOrganizationId());
+        Long userId = Long.parseLong(userDetails.getUsername());
+        log.info("User {} creating new project '{}' under organization {}", userId, request.getName(), request.getOrganizationId());
 
-        ProjectResponse response = projectService.createProject(userId, request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        ProjectResponse created = projectService.createProject(userId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-    // 🔹 Get all projects under a specific organization
-    @GetMapping("/organization/{organizationId}")
-    public ResponseEntity<List<ProjectResponse>> getProjectsByOrganization(
-            @RequestHeader("userId") Long userId,
-            @PathVariable Long organizationId) {
-
-        log.info("User ID {}: Fetching all projects for organization ID {}", userId, organizationId);
-        List<ProjectResponse> responses = projectService.getProjectsByOrganizationId(userId, organizationId);
-        return ResponseEntity.ok(responses);
-    }
-
-    // 🔹 Get project by ID
-    @GetMapping("/{projectId}")
+    //  Get a project by ID
+    @GetMapping("/projects/{projectId}")
     public ResponseEntity<ProjectResponse> getProjectById(
-            @RequestHeader("userId") Long userId,
-            @PathVariable Long projectId) {
+            @PathVariable Long projectId,
+            @AuthenticationPrincipal UserDetails userDetails) {
 
-        log.info("User ID {}: Fetching project details for ID {}", userId, projectId);
-        ProjectResponse response = projectService.getProjectById(userId, projectId);
-        return ResponseEntity.ok(response);
+        Long userId = Long.parseLong(userDetails.getUsername());
+        log.debug("User {} fetching project details for ID {}", userId, projectId);
+
+        ProjectResponse project = projectService.getProjectById(userId, projectId);
+        return ResponseEntity.ok(project);
     }
 
-    // 🔹 Update project
-    @PutMapping("/{projectId}")
-    public ResponseEntity<ProjectResponse> updateProject(
-            @RequestHeader("userId") Long userId, // <-- Added userId
-            @PathVariable Long projectId,
-            @Valid @RequestBody UpdateProjectRequest request) {
+    //  Get all projects under a specific organization
+    @GetMapping("/organizations/{organizationId}/projects")
+    public ResponseEntity<List<ProjectResponse>> getProjectsByOrganization(
+            @PathVariable Long organizationId,
+            @AuthenticationPrincipal UserDetails userDetails) {
 
-        log.info("User ID {}: Updating project ID {} with data: {}", userId, projectId, request);
+        Long userId = Long.parseLong(userDetails.getUsername());
+        log.debug("User {} fetching all projects under organization {}", userId, organizationId);
+
+        List<ProjectResponse> projects = projectService.getProjectsByOrganizationId(userId, organizationId);
+        return ResponseEntity.ok(projects);
+    }
+
+    // Update an existing project
+    @PutMapping("/projects/{projectId}")
+    public ResponseEntity<ProjectResponse> updateProject(
+            @PathVariable Long projectId,
+            @Valid @RequestBody UpdateProjectRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        Long userId = Long.parseLong(userDetails.getUsername());
+        log.info("User {} updating project ID {} with new data: {}", userId, projectId, request);
+
         ProjectResponse updated = projectService.updateProject(userId, projectId, request);
         return ResponseEntity.ok(updated);
     }
 
-    // 🔹 Delete project
-    @DeleteMapping("/{projectId}")
+    //  Delete a project
+    @DeleteMapping("/projects/{projectId}")
     public ResponseEntity<Void> deleteProject(
-            @RequestHeader("userId") Long userId,
-            @PathVariable Long projectId) {
+            @PathVariable Long projectId,
+            @AuthenticationPrincipal UserDetails userDetails) {
 
-        log.info("User ID {}: Deleting project ID {}", userId, projectId);
+        Long userId = Long.parseLong(userDetails.getUsername());
+        log.warn("User {} deleting project ID {}", userId, projectId);
+
         projectService.deleteProject(userId, projectId);
         return ResponseEntity.noContent().build();
     }
 
-    // 🔹 Count total projects
-    @GetMapping("/count")
+    // Count total projects
+    @GetMapping("/projects/count")
     public ResponseEntity<Long> countProjects() {
         long count = projectService.countProjects();
-        log.info("Total number of projects: {}", count);
+        log.info("Total number of projects in the system: {}", count);
         return ResponseEntity.ok(count);
     }
 }

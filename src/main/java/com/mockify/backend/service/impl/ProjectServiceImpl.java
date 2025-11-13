@@ -4,6 +4,7 @@ import com.mockify.backend.dto.request.project.CreateProjectRequest;
 import com.mockify.backend.dto.request.project.UpdateProjectRequest;
 import com.mockify.backend.dto.response.project.ProjectResponse;
 import com.mockify.backend.exception.BadRequestException;
+import com.mockify.backend.exception.ForbiddenException;
 import com.mockify.backend.exception.ResourceNotFoundException;
 import com.mockify.backend.mapper.ProjectMapper;
 import com.mockify.backend.model.Organization;
@@ -11,7 +12,6 @@ import com.mockify.backend.model.Project;
 import com.mockify.backend.repository.OrganizationRepository;
 import com.mockify.backend.repository.ProjectRepository;
 import com.mockify.backend.service.ProjectService;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,97 +28,112 @@ public class ProjectServiceImpl implements ProjectService {
     private final OrganizationRepository organizationRepository;
     private final ProjectMapper projectMapper;
 
-    // Create new project under an organization
-    @Transactional
     @Override
-    public ProjectResponse createProject(Long userId, CreateProjectRequest request) { // <-- Added userId parameter
-        log.info("User ID {}: Creating project '{}' under organization ID {}", userId, request.getName(), request.getOrganizationId());
+    @Transactional
+    public ProjectResponse createProject(Long userId, CreateProjectRequest request) {
+        log.info("User {} creating project '{}' under organization {}", userId, request.getName(), request.getOrganizationId());
 
-        Organization org = organizationRepository.findById(request.getOrganizationId())
-                .orElseThrow(() -> new ResourceNotFoundException("Organization not found with ID: " + request.getOrganizationId()));
+        Organization organization = organizationRepository.findById(request.getOrganizationId())
+                .orElseThrow(() -> new ResourceNotFoundException("Organization not found with id: " + request.getOrganizationId()));
 
-        // Prevent duplicate project names within same organization
-        boolean exists = projectRepository.findByOrganizationId(org.getId()).stream()
-                .anyMatch(p -> p.getName().equalsIgnoreCase(request.getName()));
-        if (exists) {
-            throw new BadRequestException("Project with name '" + request.getName() + "' already exists in this organization.");
+        // Ownership check
+        if (!organization.getOwner().getId().equals(userId)) {
+            throw new ForbiddenException("You are not authorized to create a project in this organization.");
+        }
+
+        // Check for duplicate project name in same organization
+        Project existing = projectRepository.findByNameAndOrganizationId(request.getName(), request.getOrganizationId());
+        if (existing != null) {
+            throw new BadRequestException("Project with the same name already exists under this organization.");
         }
 
         Project project = projectMapper.toEntity(request);
-        project.setOrganization(org);
+        project.setOrganization(organization);
 
         Project saved = projectRepository.save(project);
-        log.info("User ID {}: Project '{}' created successfully (ID: {})", userId, saved.getName(), saved.getId());
-
+        log.info("Project '{}' created successfully by user {}", saved.getName(), userId);
         return projectMapper.toResponse(saved);
     }
 
-    // Update existing project
-    @Transactional
     @Override
-    public ProjectResponse updateProject(Long userId, Long projectId, UpdateProjectRequest request) {
-        log.info("User ID {}: Updating project ID {}", userId, projectId);
-
-        Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new ResourceNotFoundException("Project not found with ID: " + projectId));
-
-        // Prevent duplicate name within the same organization
-        boolean nameExists = projectRepository.findByOrganizationId(project.getOrganization().getId()).stream()
-                .anyMatch(p -> !p.getId().equals(projectId)
-                        && p.getName().equalsIgnoreCase(request.getName()));
-        if (nameExists) {
-            throw new BadRequestException("Another project with name '" + request.getName() + "' already exists in this organization.");
-        }
-
-        projectMapper.updateEntityFromRequest(request, project);
-        Project updated = projectRepository.save(project);
-        log.info("User ID {}: Project ID {} updated successfully", userId, projectId);
-
-        return projectMapper.toResponse(updated);
-    }
-
-    // Fetch project by ID
     @Transactional(readOnly = true)
-    @Override
-    public ProjectResponse getProjectById(Long userId, Long projectId) {
-        log.debug("User ID {}: Fetching project with ID: {}", userId, projectId);
-
-        Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new ResourceNotFoundException("Project not found with ID: " + projectId));
-
-        return projectMapper.toResponse(project);
-    }
-
-    // Get all projects under a specific organization
-    @Transactional(readOnly = true)
-    @Override
     public List<ProjectResponse> getProjectsByOrganizationId(Long userId, Long organizationId) {
-        log.debug("User ID {}: Fetching projects for organization ID: {}", userId, organizationId);
+        log.debug("User {} fetching projects for organization {}", userId, organizationId);
 
-        if (!organizationRepository.existsById(organizationId)) {
-            throw new ResourceNotFoundException("Organization not found with ID: " + organizationId);
+        Organization organization = organizationRepository.findById(organizationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Organization not found with id: " + organizationId));
+
+        if (!organization.getOwner().getId().equals(userId)) {
+            throw new ForbiddenException("You are not authorized to view projects for this organization.");
         }
 
         List<Project> projects = projectRepository.findByOrganizationId(organizationId);
         return projectMapper.toResponseList(projects);
     }
 
-    // Delete project by ID
-    @Transactional
     @Override
-    public void deleteProject(Long userId, Long projectId) {
-        log.warn("User ID {}: Deleting project with ID: {}", userId, projectId);
+    @Transactional(readOnly = true)
+    public ProjectResponse getProjectById(Long userId, Long projectId) {
+        log.debug("User {} fetching project with ID {}", userId, projectId);
 
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found with ID: " + projectId));
 
-        projectRepository.delete(project);
-        log.info("User ID {}: Project ID {} deleted successfully", userId, projectId);
+        if (!project.getOrganization().getOwner().getId().equals(userId)) {
+            throw new ForbiddenException("You are not authorized to view this project.");
+        }
+
+        return projectMapper.toResponse(project);
     }
 
-    // Count total projects
     @Override
+    @Transactional
+    public ProjectResponse updateProject(Long userId, Long projectId, UpdateProjectRequest request) {
+        log.info("User {} updating project with ID {}", userId, projectId);
+
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + projectId));
+
+        if (!project.getOrganization().getOwner().getId().equals(userId)) {
+            throw new ForbiddenException("You are not authorized to update this project.");
+        }
+
+        // Validate duplicate project name
+        if (request.getName() != null) {
+            Project existing = projectRepository.findByNameAndOrganizationId(request.getName(), project.getOrganization().getId());
+            if (existing != null && !existing.getId().equals(projectId)) {
+                throw new BadRequestException("Project name already exists in this organization.");
+            }
+        }
+
+        projectMapper.updateEntityFromRequest(request, project);
+        Project updated = projectRepository.save(project);
+        log.info("Project '{}' updated successfully by user {}", updated.getName(), userId);
+
+        return projectMapper.toResponse(updated);
+    }
+
+    @Override
+    @Transactional
+    public void deleteProject(Long userId, Long projectId) {
+        log.info("User {} deleting project with ID {}", userId, projectId);
+
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + projectId));
+
+        if (!project.getOrganization().getOwner().getId().equals(userId)) {
+            throw new ForbiddenException("You are not authorized to delete this project.");
+        }
+
+        projectRepository.delete(project);
+        log.info("Project with ID {} deleted successfully by user {}", projectId, userId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public long countProjects() {
-        return projectRepository.count();
+        long count = projectRepository.count();
+        log.debug("Total projects count: {}", count);
+        return count;
     }
 }
