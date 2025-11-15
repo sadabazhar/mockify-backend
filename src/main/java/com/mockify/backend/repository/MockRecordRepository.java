@@ -10,17 +10,14 @@ import java.util.List;
 @Repository
 public interface MockRecordRepository extends JpaRepository<MockRecord, Long> {
 
-    // Find records under a schema
-    List<MockRecord> findByMockSchemaId(Long mockSchemaId);
+    // Get all records under a schema
+    List<MockRecord> findByMockSchema_Id(Long schemaId);
 
-    // Find active (non-expired) records
-    List<MockRecord> findByMockSchemaIdAndExpiresAtAfter(Long mockSchemaId, LocalDateTime now);
+    // Find expired records before given time
+    List<MockRecord> findByExpiresAtBefore(LocalDateTime now);
 
-    // Delete expired records
-    void deleteByExpiresAtBefore(LocalDateTime now);
-
-    // Delete records under a schema
-    void deleteByMockSchemaId(Long mockSchemaId);
+    // Delete all records under a schema
+    void deleteByMockSchema_Id(Long schemaId);
 
     // Count all records
     long count();

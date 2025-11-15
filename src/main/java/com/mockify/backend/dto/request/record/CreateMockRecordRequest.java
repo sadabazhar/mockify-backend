@@ -10,4 +10,5 @@ import java.util.Map;
 public class CreateMockRecordRequest {
     private Long schemaId;
     private Map<String, Object> data;
+
 }

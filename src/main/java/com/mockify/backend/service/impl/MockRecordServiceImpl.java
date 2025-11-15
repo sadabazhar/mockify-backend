@@ -1,64 +1,116 @@
 package com.mockify.backend.service.impl;
 
-//Handles mock data records tied to schemas.
-
 import com.mockify.backend.dto.request.record.CreateMockRecordRequest;
 import com.mockify.backend.dto.request.record.UpdateMockRecordRequest;
 import com.mockify.backend.dto.response.record.MockRecordResponse;
+import com.mockify.backend.exception.BadRequestException;
+import com.mockify.backend.exception.ResourceNotFoundException;
+import com.mockify.backend.mapper.MockRecordMapper;
+import com.mockify.backend.model.MockRecord;
+import com.mockify.backend.model.MockSchema;
+import com.mockify.backend.repository.MockRecordRepository;
+import com.mockify.backend.repository.MockSchemaRepository;
 import com.mockify.backend.service.MockRecordService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
-// Handles mock data records tied to schemas.
 @Service
+@RequiredArgsConstructor
 public class MockRecordServiceImpl implements MockRecordService {
 
-    // Create new record under schema
+    private final MockRecordRepository mockRecordRepository;
+    private final MockSchemaRepository mockSchemaRepository;
+    private final MockRecordMapper mockRecordMapper;
+
+    // CREATE single record
     @Override
+    @Transactional
     public MockRecordResponse createRecord(CreateMockRecordRequest request) {
-        return null;
+
+        if (request == null) {
+            throw new BadRequestException("Request cannot be null");
+        }
+        if (request.getSchemaId() == null) {
+            throw new BadRequestException("Schema ID is required");
+        }
+
+        MockSchema schema = mockSchemaRepository.findById(request.getSchemaId())
+                .orElseThrow(() -> new ResourceNotFoundException("Schema not found"));
+
+        MockRecord record = mockRecordMapper.toEntity(request);
+        record.setMockSchema(schema);
+        record.setCreatedAt(LocalDateTime.now());
+        record.setExpiresAt(LocalDateTime.now().plusDays(7));
+
+        mockRecordRepository.save(record);
+        return mockRecordMapper.toResponse(record);
     }
 
-    // Create new record under schema
+    // CREATE multiple records (bulk)
     @Override
+    @Transactional
     public List<MockRecordResponse> createRecordsBulk(List<CreateMockRecordRequest> requests) {
-        return List.of();
+        return requests.stream()
+                .map(this::createRecord)
+                .toList();
     }
 
-    // Get record by ID
+    // GET record by ID
     @Override
+    @Transactional(readOnly = true)
     public MockRecordResponse getRecordById(Long recordId) {
-        return null;
+        MockRecord record = mockRecordRepository.findById(recordId)
+                .orElseThrow(() -> new ResourceNotFoundException("Record not found"));
+        return mockRecordMapper.toResponse(record);
     }
 
-    // Get all records under a schema
+    // GET all records under a schema
     @Override
+    @Transactional(readOnly = true)
     public List<MockRecordResponse> getRecordsBySchemaId(Long schemaId) {
-        return List.of();
+        List<MockRecord> records = mockRecordRepository.findByMockSchema_Id(schemaId);
+        return mockRecordMapper.toResponseList(records);
     }
 
-    // Update record data
+    // UPDATE record
     @Override
+    @Transactional
     public MockRecordResponse updateRecord(Long recordId, UpdateMockRecordRequest request) {
-        return null;
+        MockRecord record = mockRecordRepository.findById(recordId)
+                .orElseThrow(() -> new ResourceNotFoundException("Record not found"));
+
+        mockRecordMapper.updateEntityFromRequest(request, record);
+
+        mockRecordRepository.save(record);
+        return mockRecordMapper.toResponse(record);
     }
 
-    // Delete record by ID
+    // DELETE record by ID
     @Override
+    @Transactional
     public void deleteRecord(Long recordId) {
-
+        if (!mockRecordRepository.existsById(recordId)) {
+            throw new ResourceNotFoundException("Record not found");
+        }
+        mockRecordRepository.deleteById(recordId);
     }
 
-    // Delete expired records periodically
+    // DELETE expired records automatically
     @Override
+    @Transactional
     public void deleteExpiredRecords() {
-
+        List<MockRecord> expired = mockRecordRepository.findByExpiresAtBefore(LocalDateTime.now());
+        mockRecordRepository.deleteAll(expired);
     }
 
-    // Count total records
+    // COUNT total records
     @Override
+    @Transactional(readOnly = true)
     public long countRecords() {
-        return 0;
+        return mockRecordRepository.count();
     }
 }
