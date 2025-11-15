@@ -11,6 +11,7 @@ import com.mockify.backend.model.Organization;
 import com.mockify.backend.model.Project;
 import com.mockify.backend.repository.OrganizationRepository;
 import com.mockify.backend.repository.ProjectRepository;
+import com.mockify.backend.service.AccessControlService;
 import com.mockify.backend.service.ProjectService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +28,7 @@ public class ProjectServiceImpl implements ProjectService {
     private final ProjectRepository projectRepository;
     private final OrganizationRepository organizationRepository;
     private final ProjectMapper projectMapper;
+    private final AccessControlService accessControlService;
 
     @Override
     @Transactional
@@ -37,9 +39,7 @@ public class ProjectServiceImpl implements ProjectService {
                 .orElseThrow(() -> new ResourceNotFoundException("Organization not found with id: " + request.getOrganizationId()));
 
         // Ownership check
-        if (!organization.getOwner().getId().equals(userId)) {
-            throw new ForbiddenException("You are not authorized to create a project in this organization.");
-        }
+        accessControlService.checkOrganizationAccess(userId, organization, "Organization");
 
         // Check for duplicate project name in same organization
         Project existing = projectRepository.findByNameAndOrganizationId(request.getName(), request.getOrganizationId());
@@ -63,9 +63,7 @@ public class ProjectServiceImpl implements ProjectService {
         Organization organization = organizationRepository.findById(organizationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Organization not found with id: " + organizationId));
 
-        if (!organization.getOwner().getId().equals(userId)) {
-            throw new ForbiddenException("You are not authorized to view projects for this organization.");
-        }
+        accessControlService.checkOrganizationAccess(userId, organization, "Organization");
 
         List<Project> projects = projectRepository.findByOrganizationId(organizationId);
         return projectMapper.toResponseList(projects);
@@ -79,9 +77,7 @@ public class ProjectServiceImpl implements ProjectService {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found with ID: " + projectId));
 
-        if (!project.getOrganization().getOwner().getId().equals(userId)) {
-            throw new ForbiddenException("You are not authorized to view this project.");
-        }
+        accessControlService.checkOrganizationAccess(userId, project.getOrganization(), "Project");
 
         return projectMapper.toResponse(project);
     }
@@ -94,9 +90,7 @@ public class ProjectServiceImpl implements ProjectService {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + projectId));
 
-        if (!project.getOrganization().getOwner().getId().equals(userId)) {
-            throw new ForbiddenException("You are not authorized to update this project.");
-        }
+        accessControlService.checkOrganizationAccess(userId, project.getOrganization(), "Project");
 
         // Validate duplicate project name
         if (request.getName() != null) {
@@ -121,9 +115,7 @@ public class ProjectServiceImpl implements ProjectService {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + projectId));
 
-        if (!project.getOrganization().getOwner().getId().equals(userId)) {
-            throw new ForbiddenException("You are not authorized to delete this project.");
-        }
+        accessControlService.checkOrganizationAccess(userId, project.getOrganization(), "Project");
 
         projectRepository.delete(project);
         log.info("Project with ID {} deleted successfully by user {}", projectId, userId);

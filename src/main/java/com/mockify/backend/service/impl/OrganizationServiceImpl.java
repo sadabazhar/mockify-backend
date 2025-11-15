@@ -10,6 +10,7 @@ import com.mockify.backend.model.Organization;
 import com.mockify.backend.model.User;
 import com.mockify.backend.repository.OrganizationRepository;
 import com.mockify.backend.repository.UserRepository;
+import com.mockify.backend.service.AccessControlService;
 import com.mockify.backend.service.OrganizationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +27,7 @@ public class OrganizationServiceImpl implements OrganizationService {
     private final OrganizationRepository organizationRepository;
     private final UserRepository userRepository;
     private final OrganizationMapper organizationMapper;
+    private final AccessControlService accessControlService;
 
     // Create new organization under current user
     @Transactional
@@ -81,9 +83,7 @@ public class OrganizationServiceImpl implements OrganizationService {
                 .orElseThrow(() -> new ResourceNotFoundException("Organization not found with ID: " + orgId));
 
         // Verify ownership
-        if (!organization.getOwner().getId().equals(userId)) {
-            throw new BadRequestException("You are not allowed to update this organization.");
-        }
+        accessControlService.checkOrganizationAccess(userId, organization, "Organization");
 
         // Prevent duplicate name under same user
         boolean nameExists = organizationRepository.findByOwnerId(userId).stream()
@@ -109,9 +109,8 @@ public class OrganizationServiceImpl implements OrganizationService {
         Organization organization = organizationRepository.findById(orgId)
                 .orElseThrow(() -> new ResourceNotFoundException("Organization not found with ID: " + orgId));
 
-        if (!organization.getOwner().getId().equals(userId)) {
-            throw new BadRequestException("You are not allowed to delete this organization.");
-        }
+        // Verify ownership
+        accessControlService.checkOrganizationAccess(userId, organization, "Organization");
 
         organizationRepository.delete(organization);
         log.info("Organization ID {} deleted successfully", orgId);
