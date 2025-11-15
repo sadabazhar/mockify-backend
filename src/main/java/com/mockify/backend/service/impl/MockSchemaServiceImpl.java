@@ -14,6 +14,7 @@ import com.mockify.backend.repository.MockSchemaRepository;
 import com.mockify.backend.repository.ProjectRepository;
 import com.mockify.backend.service.AccessControlService;
 import com.mockify.backend.service.MockSchemaService;
+import com.mockify.backend.service.MockValidatorService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +29,7 @@ public class MockSchemaServiceImpl implements MockSchemaService {
     private final ProjectRepository projectRepository;
     private final MockSchemaMapper mockSchemaMapper;
     private final ObjectMapper objectMapper;
+    private final MockValidatorService mockValidatorService;
     private final AccessControlService accessControlService;
 
     // Utility method to fetch project with ownership validation
@@ -63,14 +65,8 @@ public class MockSchemaServiceImpl implements MockSchemaService {
             throw new DuplicateResourceException("Schema with the same name already exists in this project");
         }
 
-        // Validate JSON
-        if (request.getSchemaJson() != null) {
-            try {
-                objectMapper.valueToTree(request.getSchemaJson());
-            } catch (Exception e) {
-                throw new BadRequestException("Invalid JSON format");
-            }
-        }
+        // Validate Mock Schema
+        mockValidatorService.validateSchemaDefinition(request.getSchemaJson());
 
         MockSchema schema = mockSchemaMapper.toEntity(request);
         schema.setProject(project);
@@ -123,14 +119,8 @@ public class MockSchemaServiceImpl implements MockSchemaService {
             }
         }
 
-        // Validate JSON
-        if (request.getSchemaJson() != null) {
-            try {
-                objectMapper.valueToTree(request.getSchemaJson());
-            } catch (Exception e) {
-                throw new BadRequestException("Invalid JSON format");
-            }
-        }
+        // Validate Mock Schema
+        mockValidatorService.validateSchemaDefinition(request.getSchemaJson());
 
         mockSchemaMapper.updateEntityFromRequest(request, schema);
         mockSchemaRepository.save(schema);
