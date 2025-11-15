@@ -1,6 +1,6 @@
 package com.mockify.backend.service.impl;
 
-import com.mockify.backend.exception.ForbiddenException;
+import com.mockify.backend.exception.AccessDeniedException;
 import com.mockify.backend.model.Organization;
 import com.mockify.backend.service.AccessControlService;
 import org.springframework.stereotype.Service;
@@ -13,7 +13,7 @@ public class AccessControlServiceImpl implements AccessControlService {
 
         // Current rule: only owner has access
         if (!organization.getOwner().getId().equals(userId)) {
-            throw new ForbiddenException(
+            throw new AccessDeniedException(
                     "You do not have permission to access this " + resourceName
             );
         }
