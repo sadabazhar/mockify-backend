@@ -26,8 +26,8 @@ public class PasswordResetTokenCleanupScheduler {
 
         try {
             long start = System.currentTimeMillis();
-            long duration = System.currentTimeMillis() - start;
             int deleted = cleanupService.cleanExpiredTokens();
+            long duration = System.currentTimeMillis() - start;
 
             log.info("[Cleanup] Deleted {} expired password reset tokens in {} ms", deleted, duration);
         } catch (Exception ex) {
