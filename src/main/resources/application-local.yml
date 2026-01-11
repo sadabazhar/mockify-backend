@@ -32,3 +32,14 @@ app:
       max-age: 604800        # 7 days
       secure: false          # HTTP allowed (localhost)
       same-site: Lax         # Works well for same-site dev
+
+# Actuator configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"     # expose all actuator endpoints locally
+
+  endpoint:
+    health:
+      show-details: always

@@ -77,6 +77,10 @@ public class SecurityConfig {
                                 "/webjars/**"
                         ).permitAll()
 
+                        // Allows all Actuator endpoints only for DEV without requiring auth
+                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                        .requestMatchers("/actuator/**").permitAll() // TODO: Set role to ADMIN in prod (Must)
+
                         // All other endpoints require authentication
                         .anyRequest().authenticated()
                 )

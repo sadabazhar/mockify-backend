@@ -87,3 +87,14 @@ cleanup:
   mock-data:
     enabled: true
     cron: "0 */10 * * * *" # every 10 minutes
+
+# Actuator configuration
+management:
+  endpoints:
+    web:
+      base-path: /actuator
+      exposure:
+        include: health, info
+  endpoint:
+    health:
+      show-details: never
