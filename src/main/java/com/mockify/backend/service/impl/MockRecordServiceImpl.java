@@ -11,6 +11,7 @@ import com.mockify.backend.model.MockRecord;
 import com.mockify.backend.model.MockSchema;
 import com.mockify.backend.repository.MockRecordRepository;
 import com.mockify.backend.repository.MockSchemaRepository;
+import com.mockify.backend.service.MockAutoGenerateService;
 import com.mockify.backend.service.MockRecordService;
 import com.mockify.backend.service.MockValidatorService;
 import com.mockify.backend.service.AccessControlService;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -34,6 +36,9 @@ public class MockRecordServiceImpl implements MockRecordService {
     private final MockRecordMapper mockRecordMapper;
     private final MockValidatorService mockValidatorService;
     private final AccessControlService accessControlService;
+    private final MockAutoGenerateService autoGenerateService;
+
+
 
     @Override
     @Transactional
@@ -166,4 +171,42 @@ public class MockRecordServiceImpl implements MockRecordService {
         log.debug("Total mock records count={}", count);
         return count;
     }
+
+    @Transactional
+    @Override
+    public List<MockRecordResponse> autoGenerateRecordsBulk(
+            UUID userId,
+            UUID schemaId,
+            int count
+    ) {
+
+        MockSchema schema = mockSchemaRepository.findById(schemaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Schema not found"));
+
+        Map<String, Object> schemaJson = schema.getSchemaJson();
+
+
+        // validate schema once
+        mockValidatorService.validateSchemaDefinition(schemaJson);
+
+        List<CreateMockRecordRequest> requests = new ArrayList<>();
+
+        for (int i = 0; i < count; i++) {
+
+            Map<String, Object> record =
+                    autoGenerateService.generateRecord(schemaJson);
+
+            // validate generated record
+            mockValidatorService.validateRecordAgainstSchema(schemaJson, record);
+
+            CreateMockRecordRequest req = new CreateMockRecordRequest();
+            req.setData(record);
+
+            requests.add(req);
+        }
+
+        // 🔥 reuse existing bulk logic
+        return createRecordsBulk(userId, schemaId, requests);
+    }
+
 }

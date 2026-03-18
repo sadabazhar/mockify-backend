@@ -23,4 +23,11 @@ public interface MockRecordService {
     void deleteRecord(UUID userId, UUID recordId);
 
     long countRecords();
+
+    List<MockRecordResponse> autoGenerateRecordsBulk(
+            UUID userId,
+            UUID schemaId,
+            int count
+    );
+
 }
