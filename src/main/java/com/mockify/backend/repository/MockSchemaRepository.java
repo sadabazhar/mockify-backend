@@ -1,7 +1,9 @@
 package com.mockify.backend.repository;
 
 import com.mockify.backend.model.MockSchema;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -26,4 +28,12 @@ public interface MockSchemaRepository extends JpaRepository<MockSchema, UUID> {
     Optional<MockSchema> findBySlugAndProjectId(String slug, UUID projectId);
 
     boolean existsBySlugAndProjectId(String slug, UUID projectId);
+
+    // Eager-load full hierarchy for permission evaluation (avoids LazyInitializationException)
+    @EntityGraph(attributePaths = {
+            "project",
+            "project.organization",
+            "project.organization.owner"
+    })
+    Optional<MockSchema> findWithContextById(@Param("id") UUID id);
 }

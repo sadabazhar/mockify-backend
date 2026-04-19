@@ -1,5 +1,7 @@
 package com.mockify.backend.config;
 
+import com.mockify.backend.security.ApiKeyAuthenticationFilter;
+import com.mockify.backend.security.ApiKeyRateLimitFilter;
 import com.mockify.backend.security.CustomAuthenticationEntryPoint;
 import com.mockify.backend.security.JwtAuthenticationFilter;
 import com.mockify.backend.security.RateLimitFilter;
@@ -24,6 +26,14 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 
+/**
+ *
+ * Authentication Flow:
+ * 1. JWT Filter checks for Bearer token
+ * 2. API Key Filter checks for X-API-Key header
+ *
+ * Priority: JWT > API Key
+ */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -31,6 +41,8 @@ import java.util.Arrays;
 public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final RateLimitFilter rateLimitFilter;
+    private final ApiKeyAuthenticationFilter apiKeyAuthenticationFilter;
+    private final ApiKeyRateLimitFilter apiKeyRateLimitFilter;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 
     @Bean
@@ -70,12 +82,12 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers("/actuator/**").hasAuthority("ROLE_ADMIN")
 
-                        // OAuth2 endpoints must be public for the handshake
+                        // OAuth2 endpoints
                         .requestMatchers("/oauth2/**").permitAll()
                         .requestMatchers("/login/oauth2/**").permitAll()
                         .requestMatchers("/.well-known/**").permitAll()
 
-                        // Allows Swagger to work in DEV without requiring auth.
+                        // Swagger/API docs
                         .requestMatchers(
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
@@ -84,19 +96,16 @@ public class SecurityConfig {
                                 "/webjars/**"
                         ).permitAll()
 
-                        // Allows some Actuator endpoints only for DEV without requiring auth
-                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
-
-                        // All other endpoints require authentication
+                        // All other endpoints require authentication (JWT or API key)
                         .anyRequest().authenticated()
                 )
 
-                // If a request is unauthorized, don’t redirect just send a 401 JSON response.
+                // Custom error handling
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(customAuthenticationEntryPoint)
                 )
 
-                // OAuth2 login config (user service + success handler)
+                // OAuth2 configuration
                 .oauth2Login(oauth -> oauth
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(customOAuth2UserService)
@@ -104,10 +113,18 @@ public class SecurityConfig {
                         .successHandler(oAuth2AuthenticationSuccessHandler)
                 )
 
-                // keep JWT filter (before UsernamePasswordAuthenticationFilter)
+                // Authentication filters
+                // 1. JWT authentication (highest priority)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                // keep rate limit filter (after JWT Filter)
-                .addFilterAfter(rateLimitFilter, JwtAuthenticationFilter.class);
+
+                // 2. API Key authentication (fallback if no JWT)
+                .addFilterAfter(apiKeyAuthenticationFilter, JwtAuthenticationFilter.class)
+
+                // 3. General rate limiting (global + group rules)
+                .addFilterAfter(rateLimitFilter, ApiKeyAuthenticationFilter.class)
+
+                // 4. API Key-specific rate limiting (per key quotas, stricter limits)
+                .addFilterAfter(apiKeyRateLimitFilter, RateLimitFilter.class)
 
         return http.build();
     }
@@ -132,7 +149,8 @@ public class SecurityConfig {
                 "Accept",
                 "Origin",
                 "Access-Control-Request-Method",
-                "Access-Control-Request-Headers"
+                "Access-Control-Request-Headers",
+                "X-API-Key"
         ));
 
         configuration.setExposedHeaders(Arrays.asList(

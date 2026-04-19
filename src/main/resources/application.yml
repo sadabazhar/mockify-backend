@@ -81,6 +81,9 @@ app:
     email:
       ttl-minutes: 30
       frontend-url: http://localhost:3000/verify-email
+  api-key:
+    secret: ${API_KEY_SECRET}
+    max-per-organization: ${API_KEY_MAX_PER_ORG:50}
 
 # Cleanup Scheduling
 cleanup:

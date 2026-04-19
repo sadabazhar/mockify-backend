@@ -36,6 +36,10 @@ app:
       secure: true           # REQUIRED in prod
       same-site: None        # REQUIRED for cross-domain frontend
 
+  api-key:
+    secret: ${API_KEY_SECRET} # Must be set in production
+    max-per-organization: 20
+
 # Actuator configuration (Only for Admin)
 management:
   endpoints:

@@ -13,7 +13,7 @@ import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("api/admin")
+@RequestMapping("/api/admin")
 @Tag(name = "Admin")
 @PreAuthorize("hasAuthority('ROLE_ADMIN')")
 public class AdminController {

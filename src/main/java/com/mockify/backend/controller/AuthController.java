@@ -6,6 +6,7 @@ import com.mockify.backend.dto.response.auth.AuthResponse;
 import com.mockify.backend.dto.response.auth.UserResponse;
 import com.mockify.backend.security.CookieUtil;
 import com.mockify.backend.security.JwtTokenProvider;
+import com.mockify.backend.security.SecurityUtils;
 import com.mockify.backend.service.AuthService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -13,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -59,12 +61,17 @@ public class AuthController {
                 .body(authResult.response());
     }
 
+    /**
+     * Returns the current authenticated user's profile.
+     * SECURITY: JWT-only.
+     */
     @GetMapping("/me")
-    public ResponseEntity<UserResponse> getCurrentUser(
-            @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<UserResponse> getCurrentUser(Authentication auth) {
 
-        UUID userId = UUID.fromString(userDetails.getUsername());
+        // API keys must not reach this endpoint
+        SecurityUtils.requireJwtAuthentication(auth);
 
+        UUID userId = SecurityUtils.resolveUserId(auth);
         UserResponse user = authService.getCurrentUser(userId);
         return ResponseEntity.ok(user);
     }

@@ -2,6 +2,8 @@ package com.mockify.backend.repository;
 
 import com.mockify.backend.model.Project;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -26,4 +28,13 @@ public interface ProjectRepository extends JpaRepository<Project, UUID> {
     Optional<Project> findBySlugAndOrganizationId(String slug, UUID organizationId);
 
     boolean existsBySlugAndOrganizationId(String slug, UUID organizationId);
+
+    // Eager-load org + owner for permission evaluation (avoids LazyInitializationException)
+    @Query("""
+        SELECT p FROM Project p
+        JOIN FETCH p.organization o
+        JOIN FETCH o.owner
+        WHERE p.id = :id
+    """)
+    Optional<Project> findByIdWithOrgAndOwner(@Param("id") UUID id);
 }
