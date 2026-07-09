@@ -1,17 +1,38 @@
 # Production Environment Configuration
 
+server:
+  port: ${PORT:8080}
+  shutdown: graceful
+  forward-headers-strategy: framework
+
 spring:
-  # Production Database Configuration
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+
   datasource:
     url: ${DB_URL}
     username: ${DB_USER}
     password: ${DB_PASS}
+    hikari:
+      maximum-pool-size: 5      # Neon free tier has connection limits
+      connection-timeout: 20000
 
-  # JPA Debugging Settings disable
   jpa:
     show-sql: false
 
-# JWT Configuration (Production)
+  data:
+    redis:
+      url: ${REDIS_URL}
+      ssl:
+        enabled: true            # Upstash requires TLS
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            redirect-uri: ${GOOGLE_REDIRECT_URI}
+
 jwt:
   secret: ${JWT_SECRET}
   access:
@@ -19,34 +40,39 @@ jwt:
   refresh:
     expiration: ${JWT_REFRESH_EXPIRATION:86400000}
 
-# API Documentation (Disabled in Prod)
 springdoc:
   api-docs:
     enabled: false
   swagger-ui:
     enabled: false
 
-# Application Cookie Settings (Production)
 app:
+  frontend:
+    url: ${FRONTEND_URL}
+    reset-password-url: ${FRONTEND_URL}/reset-password
+  verification:
+    email:
+      frontend-url: ${FRONTEND_URL}/verify-email
+
   cookie:
     refresh-token:
       name: refresh_token
-      path: /api/auth        # Send cookie only for auth url (Refresh & Logout)
-      max-age: 604800        # 7 days
-      secure: true           # REQUIRED in prod
-      same-site: None        # REQUIRED for cross-domain frontend
+      path: /api/auth
+      max-age: 604800
+      secure: true
+      same-site: None
 
   api-key:
-    secret: ${API_KEY_SECRET} # Must be set in production
+    secret: ${API_KEY_SECRET}
     max-per-organization: 20
 
-# Actuator configuration (Only for Admin)
 management:
   endpoints:
     web:
       exposure:
         include: health, info
-
   endpoint:
     health:
       show-details: when_authorized
+      probes:
+        enabled: true

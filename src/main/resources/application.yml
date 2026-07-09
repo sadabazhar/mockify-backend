@@ -46,7 +46,7 @@ spring:
               - openid
               - profile
               - email
-            redirect-uri: http://localhost:8080/login/oauth2/code/google
+            redirect-uri: ${GOOGLE_REDIRECT_URI:http://localhost:8080/login/oauth2/code/google}
             client-name: Google
             authorization-grant-type: authorization_code
         provider:
@@ -69,8 +69,7 @@ spring:
  # Redis configuration
   data:
     redis:
-      host: redis
-      port: 6379
+      url: ${REDIS_URL:redis://redis:6379}
 
 # Application-Specific Properties (Frontend)
 app:

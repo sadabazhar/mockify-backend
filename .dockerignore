@@ -1,0 +1,13 @@
+.git
+.gitignore
+.gitattributes
+.github
+.idea
+.vscode
+target/
+docs/
+*.md
+compose.yml
+.env
+.env.*
+secrets.txt

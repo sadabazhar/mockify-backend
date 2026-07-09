@@ -1,0 +1,72 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  REGION: ${{ secrets.GCP_REGION }}
+  SERVICE: mockify-backend
+  IMAGE: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mockify-backend/mockify-backend:${{ github.sha }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+
+      - name: Build and Push Image
+        run: |
+          docker build --platform linux/amd64 -t ${{ env.IMAGE }} .
+          docker push ${{ env.IMAGE }}
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.SERVICE }}
+          region: ${{ env.REGION }}
+          image: ${{ env.IMAGE }}
+          env_vars: |-
+            SPRING_PROFILES_ACTIVE=prod
+            FRONTEND_URL=${{ secrets.FRONTEND_URL }}
+            GOOGLE_REDIRECT_URI=${{ secrets.GOOGLE_REDIRECT_URI }}
+          secrets: |-
+            DB_URL=DB_URL:latest
+            DB_USER=DB_USER:latest
+            DB_PASS=DB_PASS:latest
+            REDIS_URL=REDIS_URL:latest
+            JWT_SECRET=JWT_SECRET:latest
+            API_KEY_SECRET=API_KEY_SECRET:latest
+            GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:latest
+            GOOGLE_CLIENT_SECRET=GOOGLE_CLIENT_SECRET:latest
+            MAIL_USERNAME=MAIL_USERNAME:latest
+            MAIL_PASSWORD=MAIL_PASSWORD:latest
+          flags: |-
+            --allow-unauthenticated
+            --cpu-boost
+            --memory=1Gi
+            --cpu=1
+            --min-instances=0
+            --max-instances=4
+            --concurrency=20
+            --timeout=300
+
+      - run: echo "Deployed to ${{ steps.deploy.outputs.url }}"
