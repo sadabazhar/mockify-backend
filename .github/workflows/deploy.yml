@@ -12,6 +12,10 @@ env:
   SERVICE: mockify-backend
   IMAGE: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mockify-backend/mockify-backend:${{ github.sha }}
 
+# Least-privilege default — the deploy job overrides this with id-token: write
+permissions:
+  contents: read
+
 jobs:
   # -------------------------------------------------------------------------
   # 1. CI Stage: Runs on both PRs and Merges to ensure the code always works
@@ -21,6 +25,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -49,6 +55,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2

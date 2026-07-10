@@ -15,7 +15,10 @@ spring:
     password: ${DB_PASS}
     hikari:
       maximum-pool-size: 5      # Neon free tier has connection limits
-      connection-timeout: 20000
+      minimum-idle: 0           # Allow pool to shrink to zero during quiet periods (Neon auto-suspend)
+      connection-timeout: 20000 # 20s — fail fast rather than queue requests
+      idle-timeout: 30000       # 30s — close idle connections before Neon drops them (~5 min suspend)
+      max-lifetime: 600000      # 10 min — recycle connections proactively before they go stale
 
   jpa:
     show-sql: false
