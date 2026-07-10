@@ -24,6 +24,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import org.springframework.beans.factory.annotation.Value;
 import java.util.Arrays;
 
 /**
@@ -44,6 +45,8 @@ public class SecurityConfig {
     private final ApiKeyAuthenticationFilter apiKeyAuthenticationFilter;
     private final ApiKeyRateLimitFilter apiKeyRateLimitFilter;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
+    @Value("${app.frontend.url}")
+    private String frontendUrl;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -133,9 +136,14 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
+        // Always allow localhost for local development.
+        // In production, frontendUrl is injected from the FRONTEND_URL env var
+        // (set as a GitHub secret), so no code change is ever needed when
+        // the production frontend URL changes — just update the secret.
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:3000",
-                "http://localhost:3001"
+                "http://localhost:3001",
+                frontendUrl
         ));
 
         configuration.setAllowedMethods(Arrays.asList(
