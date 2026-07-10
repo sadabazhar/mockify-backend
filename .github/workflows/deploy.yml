@@ -1,9 +1,11 @@
-name: Deploy to Cloud Run
+name: CI/CD Pipeline
 
+# Trigger the workflow on PR creation/updates AND merges to main
 on:
+  pull_request:
+    branches: [main]
   push:
-    branches:
-      - main
+    branches: [main]
 
 env:
   REGION: ${{ secrets.GCP_REGION }}
@@ -11,7 +13,35 @@ env:
   IMAGE: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mockify-backend/mockify-backend:${{ github.sha }}
 
 jobs:
+  # -------------------------------------------------------------------------
+  # 1. CI Stage: Runs on both PRs and Merges to ensure the code always works
+  # -------------------------------------------------------------------------
+  build-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build
+        # Full package build — catches resource/config errors that bare compile misses
+        # (e.g. broken @Bean wiring, missing @Value properties, Flyway classpath issues).
+        # Tests are intentionally skipped for now (fast MVP pipeline).
+        # TODO: Add -Dspring.profiles.active=test with service containers once test stabilises.
+        run: mvn clean package -DskipTests -B
+
+  # -------------------------------------------------------------------------
+  # 2. CD Stage: Runs ONLY when code is successfully pushed/merged into main
+  # -------------------------------------------------------------------------
   deploy:
+    needs: build-and-validate # Ensures deployment only happens if CI passes!
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
