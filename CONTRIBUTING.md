@@ -204,5 +204,4 @@ Providing clear and detailed information helps maintainers and contributors diag
 
 ---
 
-Thank you once again for your interest in contributing to **Mockify**! Every contribution, no matter how small, helps make the project better.
-
+#### Thank you once again for your interest in contributing to **Mockify**! Every contribution, no matter how small, helps make the project better.
