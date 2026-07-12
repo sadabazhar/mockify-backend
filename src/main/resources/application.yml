@@ -110,41 +110,118 @@ management:
       show-details: never
 
 
-# Rate limiting configuration
+# Rate Limiting Configuration
 mockify:
   rate-limit:
-
-    # Global rate limit applied to all requests by default (Prevent bot spamming and DDOS)
-    # If a request does not match any group below, this limit applies
+    # Global fallback to prevent volumetric DDoS and generic bot spam
     global:
       limit: 200
       window: 1m
       type: ip
 
-    groups:
-
-      # Very strict to prevent brute-force attacks
-      auth:
-        paths:
-          - /api/auth/**
-        limit: 5
+    # ---------------------------------------------------------
+    # SPECIFIC ENDPOINTS (Overrides group and global rules)
+    # ---------------------------------------------------------
+    endpoints:
+      # Authentication - Strict limits to prevent brute force & enumeration
+      login:
+        path: /api/auth/login
+        method: POST
+        limit: 10
         window: 1m
         type: ip
+      register:
+        path: /api/auth/register
+        method: POST
+        limit: 5
+        window: 10m
+        type: ip
+      forgot-password:
+        path: /api/auth/forgot-password
+        method: POST
+        limit: 3
+        window: 10m
+        type: ip
+      reset-password:
+        path: /api/auth/reset-password
+        method: POST
+        limit: 5
+        window: 10m
+        type: ip
+      refresh:
+        path: /api/auth/refresh
+        method: POST
+        limit: 30      # Allows for concurrent tab token refreshing
+        window: 1m
+        type: ip
+      logout:
+        path: /api/auth/logout
+        method: POST
+        limit: 10
+        window: 1m
+        type: user
 
+      # Heavy Data Operations - Prevent DB resource exhaustion
+      bulk-insert:
+        path: /api/*/*/*/records/bulk
+        method: POST
+        limit: 10      # Bulk operations are heavy, throttle tightly
+        window: 1m
+        type: user
+      auto-bulk-insert:
+        path: /api/*/*/*/records/auto-bulk
+        method: POST
+        limit: 5       # Automated generation is even heavier
+        window: 1m
+        type: user
+      openapi-import:
+        path: /api/*/*/import/openapi
+        method: POST
+        limit: 5       # Parsing large JSON/YAML files is CPU intensive
+        window: 1m
+        type: user
+
+      # Sensitive Operations - Spam & Abuse prevention
+      send-invite:
+        path: /api/organizations/*/members/invite
+        method: POST
+        limit: 10      # Prevent email spamming
+        window: 1m
+        type: user
+      accept-invite:
+        path: /api/invitations/accept
+        method: POST
+        limit: 10
+        window: 1m
+        type: ip
+      rotate-api-key:
+        path: /api/*/api-keys/*/rotate
+        method: POST
+        limit: 5
+        window: 1m
+        type: user
+
+    # ---------------------------------------------------------
+    # ROUTE GROUPS (Broad rules for standard interactions)
+    # ---------------------------------------------------------
+    groups:
+      # Public Mock Endpoints - Needs high throughput for actual API usage
       public-mock:
         paths:
           - /api/mock/**
-        limit: 200
+        limit: 600     # Allow higher burst for mock consumption
         window: 1m
-        type: ip
+        type: ip       # If API keys are supported here, change to 'api-key' or 'user'
 
-      lookup:
+      # Standard Auth (Catches /api/auth/me and /api/auth/register/verify)
+      auth-reads:
         paths:
-          - /api/endpoints/lookup/**
-        limit: 120
+          - /api/auth/**
+        limit: 120     # High enough to allow SPAs to check session state frequently
         window: 1m
         type: ip
 
+      # Dashboard - Analytical reads
       dashboard:
         paths:
           - /api/dashboard/**
@@ -152,50 +229,58 @@ mockify:
         window: 1m
         type: user
 
+      # Structural CRUD - standard application usage
       organization:
         paths:
           - /api/organizations/**
-        limit: 30
-        window: 1m
-        type: user
-
-      project:
-        paths:
-          - /api/*/*
-          - /api/*/projects/**
-        limit: 40
-        window: 1m
-        type: user
-
-      schema:
-        paths:
-          - /api/*/*/schemas
-          - /api/*/*/schemas/**
-        limit: 40
-        window: 1m
-        type: user
-
-      records:
-        paths:
-          - /api/*/*/*/records/**
         limit: 60
         window: 1m
         type: user
 
-      templates:
+      # Project & Schema Management
+      project-and-schema:
         paths:
-          - /api/schema-templates/**
-        limit: 20
+          - /api/*/*             # Project CRUD
+          - /api/*/projects/**
+          - /api/*/*/schemas/**
+        limit: 60
         window: 1m
         type: user
 
+      # Standard Record CRUD (Single record operations)
+      records:
+        paths:
+          - /api/*/*/*/records/**
+        limit: 120
+        window: 1m
+        type: user
+
+      # API Key Management (Reads and Creates)
+      api-keys:
+        paths:
+          - /api/*/api-keys/**
+          - /api/*/*/api-keys/**
+        limit: 30
+        window: 1m
+        type: user
+
+      # Lookup endpoints
+      lookup:
+        paths:
+          - /api/endpoints/lookup/**
+        limit: 120
+        window: 1m
+        type: ip
+
+      # Admin - Internal tooling
       admin:
         paths:
           - /api/admin/**
-        limit: 50
+        limit: 100
         window: 1m
         type: user
 
+      # System / Devops
       actuator:
         paths:
           - /actuator/**
