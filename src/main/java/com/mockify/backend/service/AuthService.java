@@ -4,6 +4,8 @@ import com.mockify.backend.dto.response.auth.AuthResult;
 import com.mockify.backend.dto.request.auth.LoginRequest;
 import com.mockify.backend.dto.request.auth.RegisterRequest;
 import com.mockify.backend.dto.response.auth.UserResponse;
+import com.mockify.backend.model.User;
+import com.mockify.backend.security.oauth2.OAuth2UserInfo;
 
 import java.util.UUID;
 
@@ -32,5 +34,8 @@ public interface AuthService {
 
     // Reset password via mail
     void resetPassword(String token, String newPassword);
+
+    // Register or login the OAuth user
+    public User findOrCreateOAuthUser(String provider, OAuth2UserInfo userInfo);
 
 }
