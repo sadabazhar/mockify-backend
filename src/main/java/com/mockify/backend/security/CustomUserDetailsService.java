@@ -3,16 +3,11 @@ package com.mockify.backend.security;
 import com.mockify.backend.model.User;
 import com.mockify.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Collections;
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -35,13 +30,6 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with id: " + userId));
 
-        GrantedAuthority authority =
-                new SimpleGrantedAuthority("ROLE_" + user.getRole().name());
-
-        return new org.springframework.security.core.userdetails.User(
-                user.getId().toString(),
-                user.getPassword(),
-                Collections.singletonList(authority)
-        );
+        return new AppUserDetails(user);
     }
 }
