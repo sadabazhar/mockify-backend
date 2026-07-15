@@ -15,19 +15,16 @@ import org.springframework.stereotype.Component;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 
 /**
- * Handles successful OAuth2 authentication.
+ * Handles a successful OAuth2 login.
  *
- * <p>Responsibilities:
+ * <p>After the user is authenticated by the OAuth provider, this handler:
  * <ul>
- *     <li>Retrieve the authenticated OAuth user.</li>
- *     <li>Find or create the corresponding application user.</li>
- *     <li>Generate JWT access and refresh tokens.</li>
- *     <li>Store the refresh token in an HTTP-only cookie.</li>
- *     <li>Redirect the user back to the frontend with the access token.</li>
+ *     <li>Finds or creates the application user.</li>
+ *     <li>Generates a refresh token.</li>
+ *     <li>Stores the refresh token in an HttpOnly cookie.</li>
+ *     <li>Redirects the user to the frontend.</li>
  * </ul>
  */
 @Component
@@ -67,20 +64,16 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
 
         User user = authService.findOrCreateOAuthUser("google", userInfo);
 
-        // Issue JWTs
-        String accessToken = jwtTokenProvider.generateAccessToken(user.getId(), user.getRole());
+        // Generate ONLY the refresh token here
         String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId(), user.getRole());
 
+        // Set the refresh token securely in an HttpOnly cookie
         ResponseCookie refreshCookie = cookieUtil.createRefreshToken(refreshToken);
         response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
 
-        String redirectUrl = String.format(
-                "%s/oauth2/redirect?access_token=%s&expires_in=%d",
-                FRONTEND_URL,
-                URLEncoder.encode(accessToken, StandardCharsets.UTF_8),
-                jwtTokenProvider.getAccessTokenExpiration()
-        );
+        // Redirect the user back to the frontend.
+        String redirectUrl = String.format("%s/oauth2/redirect?status=success", FRONTEND_URL);
+
         response.sendRedirect(redirectUrl);
     }
-
 }
