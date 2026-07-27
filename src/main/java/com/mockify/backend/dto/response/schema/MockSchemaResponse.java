@@ -1,5 +1,6 @@
 package com.mockify.backend.dto.response.schema;
 
+import jakarta.persistence.Version;
 import lombok.*;
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -21,4 +22,7 @@ public class MockSchemaResponse {
     private LocalDateTime updatedAt;
     private int recordCount;
     private String endpointUrl;
+    private Integer activeVersion;
+    @Version
+    private Long lockVersion;
 }
