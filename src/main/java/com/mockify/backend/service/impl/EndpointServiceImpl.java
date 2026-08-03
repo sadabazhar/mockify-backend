@@ -110,10 +110,12 @@ public class EndpointServiceImpl implements EndpointService {
             newFullPath = Endpoint.buildFullPath(endpoint.getParentEndpoint(), newSlug);
         }
 
-        // Check for conflicts
-        if (endpointRepository.existsByFullPath(newFullPath)) {
-            throw new DuplicateResourceException("Endpoint path already exists: " + newFullPath);
-        }
+        // Check for conflicts — only if a DIFFERENT endpoint already owns this path
+        endpointRepository.findByFullPath(newFullPath)
+                .filter(conflict -> !conflict.getId().equals(endpoint.getId()))
+                .ifPresent(conflict -> {
+                    throw new DuplicateResourceException("Endpoint path already exists: " + newFullPath);
+                });
 
         String oldFullPath = endpoint.getFullPath();
         endpoint.setSlug(newSlug);
