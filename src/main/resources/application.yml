@@ -32,6 +32,8 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
+    repair-on-migrate: true
+    validate-on-migrate: false
     locations: classpath:db/migration
 
   # OAuth 2 configuration (Google)
