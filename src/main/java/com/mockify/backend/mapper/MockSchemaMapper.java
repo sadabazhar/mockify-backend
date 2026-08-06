@@ -54,6 +54,7 @@ public interface MockSchemaMapper {
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "project", ignore = true)
     @Mapping(target = "mockRecords", ignore = true)
+    @Mapping(target = "schemaJson", expression = "java(request.getSchemaJson())")
     MockSchema toEntity(CreateMockSchemaRequest request);
 
     // Update Request -> Entity
@@ -65,6 +66,7 @@ public interface MockSchemaMapper {
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "mockRecords", ignore = true)
+    @Mapping(target = "schemaJson", expression = "java(request.getSchemaJson() != null ? request.getSchemaJson() : entity.getSchemaJson())")
     void updateEntityFromRequest(UpdateMockSchemaRequest request, @MappingTarget MockSchema entity);
 
     // ===== Helper Methods =====

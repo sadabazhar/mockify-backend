@@ -7,6 +7,7 @@ import com.mockify.backend.dto.response.page.PageResponse;
 import com.mockify.backend.dto.response.schema.MockSchemaDetailResponse;
 import com.mockify.backend.dto.response.schema.MockSchemaResponse;
 import com.mockify.backend.security.SecurityUtils;
+import com.mockify.backend.service.ConcurrentSchemaManager;
 import com.mockify.backend.service.EndpointService;
 import com.mockify.backend.service.MockSchemaService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -26,18 +27,18 @@ import java.util.UUID;
 
 /**
  * Mock Schema management controller.
-   * <h3>AUTHORIZATION</h3>
-   * <p>All methods are open to both JWT sessions and API key callers. Authorization
-   * is enforced declaratively via {@code @PreAuthorize("hasPermission(...)")}
-   * annotations on each {@link MockSchemaService} method, evaluated by
-   * {@link com.mockify.backend.security.MockifyPermissionEvaluator}.</p>
-   *
-   * <ul>
-   *   <li><b>JWT callers</b>: full access to all resources within their owned organization.</li>
-   *   <li><b>API key callers</b>: access gated by three sequential guards —
-   *       org scope → project scope → permission level
-   *       (hierarchy: ADMIN ⊇ DELETE ⊇ WRITE ⊇ READ).</li>
-   * </ul>
+ * <h3>AUTHORIZATION</h3>
+ * <p>All methods are open to both JWT sessions and API key callers. Authorization
+ * is enforced declaratively via {@code @PreAuthorize("hasPermission(...)")}
+ * annotations on each {@link MockSchemaService} method, evaluated by
+ * {@link com.mockify.backend.security.MockifyPermissionEvaluator}.</p>
+ *
+ * <ul>
+ *   <li><b>JWT callers</b>: full access to all resources within their owned organization.</li>
+ *   <li><b>API key callers</b>: access gated by three sequential guards —
+ *       org scope → project scope → permission level
+ *       (hierarchy: ADMIN ⊇ DELETE ⊇ WRITE ⊇ READ).</li>
+ * </ul>
  */
 @Slf4j
 @RestController
@@ -48,6 +49,7 @@ public class MockSchemaController {
 
     private final MockSchemaService mockSchemaService;
     private final EndpointService endpointService;
+    private final ConcurrentSchemaManager concurrentSchemaManager;
 
     @PostMapping("/{org}/{project}/schemas")
     public ResponseEntity<MockSchemaResponse> createSchema(
@@ -97,7 +99,7 @@ public class MockSchemaController {
         UUID schemaId = endpointService.resolveSchema(org, project, schema);
         log.info("User {} updating schema {}", userId, schemaId);
 
-        MockSchemaResponse response = mockSchemaService.updateSchema(userId, schemaId, request);
+        MockSchemaResponse response = concurrentSchemaManager.updateSchemaWithRetry(userId, schemaId, request);
         return ResponseEntity.ok(response);
     }
 

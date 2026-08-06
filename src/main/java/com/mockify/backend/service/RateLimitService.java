@@ -1,13 +1,19 @@
 package com.mockify.backend.service;
 
+import com.mockify.backend.common.enums.RateLimitType;
 import com.mockify.backend.config.RateLimitProperties;
 import com.mockify.backend.dto.response.ratelimit.RateLimitResult;
 import com.mockify.backend.infrastructure.RedisRateLimiter;
+import com.mockify.backend.security.SecurityUtils;
 import com.mockify.backend.util.RateLimitPathMatcher;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -18,14 +24,21 @@ public class RateLimitService {
     private final RedisRateLimiter redisRateLimiter;
 
     /**
-     * Applies global + group rate limit.
+     * Checks whether the current request is allowed based on the configured
+     * global and endpoint/group-specific rate limit rules.
+     *
+     * Flow:
+     * 1. Apply the global rate limit.
+     * 2. If allowed, look for a matching endpoint or group rule.
+     * 3. Apply the matched rule if one exists.
      */
-    public RateLimitResult checkRateLimit(String path, String ip) {
+    public RateLimitResult checkRateLimit(String path, HttpMethod method, String ip) {
 
-        // GLOBAL LIMIT
+        // Always enforce the global rate limit before evaluating specific rules.
         var global = properties.getGlobal();
 
-        String globalKey = buildKey(global.getType(), ip, "global");
+        String globalIdentifier = resolveIdentifier(global.getType(), ip);
+        String globalKey = buildKey(global.getType(), globalIdentifier, "global");
 
         RateLimitResult globalResult = redisRateLimiter.check(
                 globalKey,
@@ -33,59 +46,69 @@ public class RateLimitService {
                 global.getWindow()
         );
 
+        // Reject immediately if the global limit has already been exceeded.
         if (!globalResult.allowed()) {
             return globalResult;
         }
 
-        // GROUP LIMIT
-        var match = pathMatcher.match(path);
+        // Find the most specific matching rule (endpoint or group).
+        var match = pathMatcher.match(path, method);
 
+        // If no rule matches, the global rate limit is the only restriction.
         if (match == null) {
-            return globalResult; // no group match, return global result
+            return globalResult;
         }
 
-        var group = match.group();
-        String groupName = match.groupName();
+        // Extract values from the new record structure
+        var ruleLimit = match.limit();
+        String ruleName = match.ruleName();
 
-        String identifier = resolveIdentifier(group.getType(), ip);
-
-        String key = buildKey(group.getType(), identifier, groupName);
+        String identifier = resolveIdentifier(ruleLimit.getType(), ip);
+        String key = buildKey(ruleLimit.getType(), identifier, ruleName);
 
         return redisRateLimiter.check(
                 key,
-                group.getLimit(),
-                group.getWindow()
+                ruleLimit.getLimit(),
+                ruleLimit.getWindow()
         );
     }
 
     /**
-     * Resolve identifier depending on rule type.
-     * ip   → client IP
-     * user → authenticated user
+     * Resolves the identifier used for rate limiting.
+     *
+     * <ul>
+     *     <li>IP limits → client IP address</li>
+     *     <li>USER limits → authenticated user's UUID</li>
+     *     <li>Unauthenticated requests → "anonymous"</li>
+     * </ul>
      */
-    private String resolveIdentifier(String type, String ip) {
+    private String resolveIdentifier(RateLimitType type, String ip) {
 
-        if ("ip".equalsIgnoreCase(type)) {
+        if (RateLimitType.IP == type) {
             return ip;
         }
 
-        Authentication auth = SecurityContextHolder
-                .getContext()
-                .getAuthentication();
+        // Use the authenticated user's UUID when available.
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
-        if (auth != null && auth.isAuthenticated()) {
-            return auth.getName();
+        if (auth != null && auth.isAuthenticated() && !auth.getPrincipal().equals("anonymousUser")) {
+
+            UUID userId = SecurityUtils.resolveUserId(auth);
+
+            return userId.toString();
         }
 
+        // Anonymous users share a common identifier for USER-based limits.
         return "anonymous";
     }
 
     /**
-     * Redis key format:
-     * rate:<type>:<identifier>:<group>
+     * Builds a Redis key for storing rate limit counters.
+     *
+     * Format:
+     * rate:{type}:{identifier}:{ruleName}
      */
-    private String buildKey(String type, String identifier, String group) {
-
-        return "rate:" + type + ":" + identifier + ":" + group;
+    private String buildKey(RateLimitType type, String identifier, String ruleName) {
+        return "rate:" + type + ":" + identifier + ":" + ruleName;
     }
 }

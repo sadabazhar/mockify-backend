@@ -2,54 +2,73 @@ package com.mockify.backend.util;
 
 import com.mockify.backend.config.RateLimitProperties;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
 
 @Component
 @RequiredArgsConstructor
-// PathMatcher class detect which group a request belongs to and decides which rate-limit rule applies to a request.
 public class RateLimitPathMatcher {
 
     private final RateLimitProperties properties;
-
-    // Spring utility for matching URL patterns
     private final AntPathMatcher matcher = new AntPathMatcher();
 
     /**
-        Detects which rate-limit group the request path belongs to.
-
-        @param path request URI (example: /api/org/project/schema/records)
-        @return matched group configuration or null if no group matches
+     * Finds the most appropriate rate-limit rule for the incoming request.
+     *
+     * Matching priority:
+     * <ol>
+     *     <li>Endpoint-specific rules (highest priority)</li>
+     *     <li>Group rules</li>
+     * </ol>
+     *
+     * @return the matched rule, or {@code null} if no rule applies
      */
-    public RateLimitMatch match(String path) {
+    public RateLimitMatch match(String path, HttpMethod method) {
 
-        // Iterate over all configured rate-limit groups
-        for (var entry : properties.getGroups().entrySet()) {
+        // Endpoint rules take precedence over group rules.
+        if (properties.getEndpoints() != null) {
+            for (var entry : properties.getEndpoints().entrySet()) {
+                var endpoint = entry.getValue();
 
-            String groupName = entry.getKey();     // group identifier
-            var group = entry.getValue();          // group configuration
+                // Match only when both the HTTP method and path are configured
+                // and match the incoming request.
+                boolean methodMatches = endpoint.getMethod() != null && endpoint.getMethod().equals(method);
+                boolean pathMatches = endpoint.getPath() != null && matcher.match(endpoint.getPath(), path);
 
-            // Check each path pattern defined for the group
-            for (String pattern : group.getPaths()) {
-
-                // If the request path matches the pattern, return the group
-                if (matcher.match(pattern, path)) {
-                    return new RateLimitMatch(groupName, group);
+                if (methodMatches && pathMatches) {
+                    return new RateLimitMatch("endpoint:" + entry.getKey(), endpoint);
                 }
             }
         }
 
-        // No matching group found, no rate limiting applied
+        // If no endpoint rule matches, fall back to group-based rules.
+        if (properties.getGroups() != null) {
+            for (var entry : properties.getGroups().entrySet()) {
+                String groupName = entry.getKey();
+                var group = entry.getValue();
+
+                for (String pattern : group.getPaths()) {
+                    if (matcher.match(pattern, path)) {
+                        return new RateLimitMatch("group:" + groupName, group);
+                    }
+                }
+            }
+        }
+
+        // No configured rate-limit rule matches this request.
         return null;
     }
 
     /**
-     * Result object containing:
-     * - groupName → identifier of the matched rate-limit group
-     * - group → group configuration (limits, paths, etc.)
+     * Represents the matched rate-limit rule.
+     *
+     * The {@code limit} field uses the shared {@link RateLimitProperties.Limit}
+     * type, allowing this record to represent either an endpoint rule or a
+     * group rule.
      */
     public record RateLimitMatch(
-            String groupName,
-            RateLimitProperties.GroupLimit group
+            String ruleName,
+            RateLimitProperties.Limit limit
     ) {}
 }
