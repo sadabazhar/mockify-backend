@@ -20,6 +20,7 @@ import com.mockify.backend.repository.UserRepository;
 import com.mockify.backend.security.CookieUtil;
 import com.mockify.backend.security.JwtTokenProvider;
 import com.mockify.backend.security.RefreshTokenBlacklist;
+import com.mockify.backend.security.oauth2.OAuth2UserInfo;
 import com.mockify.backend.service.AuthService;
 import com.mockify.backend.service.EmailVerificationService;
 import com.mockify.backend.service.MailService;
@@ -381,5 +382,46 @@ public class AuthServiceImpl implements AuthService {
         passwordResetTokenRepository.save(validToken);
 
         log.info("Password reset successful userId={}", user.getId());
+    }
+
+    @Override
+    @Transactional
+    public User findOrCreateOAuthUser(String provider,
+                                      OAuth2UserInfo userInfo) {
+
+        return userRepository.findByEmail(userInfo.getEmail())
+                .orElseGet(() -> {
+
+                    User user = new User();
+
+                    user.setEmail(userInfo.getEmail());
+                    user.setEmailVerified(true);
+
+                    user.setRole(UserRole.USER);
+
+                    user.setName(
+                            userInfo.getName() != null
+                                    ? userInfo.getName()
+                                    : userInfo.getEmail()
+                    );
+
+                    user.setProviderName(provider);
+                    user.setProviderId(userInfo.getId());
+
+                    user.setFirstName(userInfo.getFirstName());
+                    user.setLastName(userInfo.getLastName());
+
+                    user.setAvatarUrl(userInfo.getImageUrl());
+
+                    user.setPassword(null);
+
+                    user.setUsername(
+                            userInfo.getEmail()
+                                    .split("@")[0]
+                                    .toLowerCase()
+                    );
+
+                    return userRepository.save(user);
+                });
     }
 }

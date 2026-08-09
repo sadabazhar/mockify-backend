@@ -1,5 +1,4 @@
 package com.mockify.backend.security.oauth2;
-import com.mockify.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
@@ -11,12 +10,21 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.util.Collections;
 
+/**
+ * Loads user information from an OAuth2 provider and converts it into
+ * a Spring Security {@link OAuth2User}.
+ *
+ * <p>This service is responsible only for:
+ * <ul>
+ *     <li>Fetching the user profile from the OAuth provider.</li>
+ *     <li>Normalizing provider-specific attributes.</li>
+ *     <li>Returning a Spring Security compatible principal.</li>
+ * </ul>
+ */
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
-
-    private final UserRepository userRepository;
 
     /**
      - Loads user information from Google and maps it into Spring's OAuth2User.
@@ -24,6 +32,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
      */
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) {
+
         OAuth2User oauth2User = super.loadUser(userRequest);
         String provider = userRequest.getClientRegistration().getRegistrationId();
 
@@ -36,12 +45,6 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             throw new IllegalArgumentException("Provider did not return an email");
         }
 
-        // Just logs whether user is known or new
-        userRepository.findByEmail(userInfo.getEmail())
-                .ifPresentOrElse(
-                        u -> log.info("Existing user via {}", provider),
-                        () -> log.info("New OAuth user: {}", userInfo.getEmail())
-                );
 
         // Return Spring-compatible OAuth2User
         return new DefaultOAuth2User(
