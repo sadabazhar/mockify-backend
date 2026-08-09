@@ -6,7 +6,6 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
@@ -16,6 +15,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Organization {
+
     @Id
     @GeneratedValue
     @Column(updatable = false, nullable = false)
@@ -38,13 +38,46 @@ public class Organization {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    /**
+     * True for organizations created as part of a sandbox session.
+     *
+     * Sandbox orgs are owned by GUEST users and are automatically
+     * deleted when expires_at passes. When a guest converts to a
+     * real account, this flag is set to false and expires_at is
+     * cleared — making the org indistinguishable from a real org.
+     *
+     * Invariant (enforced by DB CHECK constraint):
+     *   if isSandbox = true then expiresAt must not be null.
+     */
+    @Column(name = "is_sandbox", nullable = false)
+    private boolean isSandbox = false;
+
+    /**
+     * Sandbox expiry timestamp (null for real organizations).
+     * The cleanup scheduler deletes orgs where:
+     *   is_sandbox = true AND expires_at < NOW()
+     */
+    @Column(name = "expires_at")
+    private LocalDateTime expiresAt;
+
     @JsonIgnore
     @OneToMany(mappedBy = "organization", cascade = CascadeType.ALL)
     private Set<Project> projects = new HashSet<>();
 
-    @JsonIgnore
-    @OneToMany(mappedBy = "organization", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<OrganizationMember> members = new HashSet<>();
+    // -------------------------------------------------------------------------
+    // Lifecycle helpers
+    // -------------------------------------------------------------------------
+
+    /**
+     * Returns true if this sandbox org has passed its expiry time.
+     * Always false for non-sandbox orgs.
+     */
+    public boolean isExpired() {
+        if (!isSandbox) {
+            return false;
+        }
+        return expiresAt != null && expiresAt.isBefore(LocalDateTime.now());
+    }
 
     @PrePersist
     protected void onCreate() {

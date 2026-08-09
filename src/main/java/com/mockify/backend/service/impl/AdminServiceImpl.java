@@ -42,36 +42,43 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public Page<AdminUserResponse> listUsers(String email, UserRole role, Pageable pageable) {
-
-        // Validate page size, protect from abuse
         PageableValidator.validate(pageable);
 
-        // List all users info
+        // Always exclude GUEST accounts from admin user management.
+        // Guests are ephemeral infrastructure; admins should see real accounts only.
+        // The sandbox cleanup scheduler handles guest lifecycle separately.
+        final UserRole excludedRole = UserRole.GUEST;
+
         if (email != null && role != null) {
+            // Specific email + specific role (must not be GUEST to return results)
+            if (role == UserRole.GUEST) {
+                return Page.empty(pageable);
+            }
             return userRepository
                     .findByEmailContainingIgnoreCaseAndRole(email, role, pageable)
                     .map(userMapper::toResponse);
         }
 
-        // Specific user via email
         if (email != null) {
             return userRepository
-                    .findByEmailContainingIgnoreCase(email, pageable)
+                    .findByEmailContainingIgnoreCaseAndRoleNot(email, excludedRole, pageable)
                     .map(userMapper::toResponse);
         }
 
-        // List user with role
         if (role != null) {
+            if (role == UserRole.GUEST) {
+                return Page.empty(pageable);
+            }
             return userRepository
                     .findByRole(role, pageable)
                     .map(userMapper::toResponse);
         }
 
-        log.debug("Admin fetching users details page={}, size={}",
-                pageable.getPageNumber(),
-                pageable.getPageSize());
+        log.debug("Admin fetching users page={}, size={}",
+                pageable.getPageNumber(), pageable.getPageSize());
 
-        return userRepository.findAll(pageable)
+        return userRepository
+                .findByRoleNot(excludedRole, pageable)
                 .map(userMapper::toResponse);
     }
 

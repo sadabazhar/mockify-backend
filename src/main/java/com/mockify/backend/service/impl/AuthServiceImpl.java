@@ -140,9 +140,17 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new UnauthorizedException("Invalid email"));
 
-        // Check if it's a local user (has password)
+        // Block non-local authentication methods
         if (!AUTH_PROVIDER_LOCAL.equals(user.getProviderName())) {
             throw new UnauthorizedException("This account uses " + user.getProviderName() + " login. Please login with that provider.");
+        }
+
+        // Block guest accounts from using password-based login
+        if (user.isGuest()) {
+            throw new UnauthorizedException(
+                    "Guest sessions cannot use password authentication. " +
+                            "Use your sandbox token to resume your session."
+            );
         }
 
         //  BLOCK unverified users

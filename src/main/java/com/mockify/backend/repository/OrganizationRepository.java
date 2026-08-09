@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -40,4 +41,17 @@ public interface OrganizationRepository extends JpaRepository<Organization, UUID
     Optional<Organization> findBySlug(String slug);
 
     boolean existsBySlug(String slug);
+
+    /**
+     * Used by the cleanup scheduler to find expired sandbox orgs.
+     * Backed by idx_organizations_sandbox_expiry partial index.
+     */
+    List<Organization> findByIsSandboxTrueAndExpiresAtBefore(LocalDateTime now);
+
+    /**
+     * Used to return only real (non-sandbox) orgs in the user-facing listing.
+     */
+    Page<Organization> findByOwnerIdAndIsSandboxFalse(UUID ownerId, Pageable pageable);
+
+    Optional<Organization> findByOwnerIdAndIsSandboxTrue(UUID ownerId);
 }

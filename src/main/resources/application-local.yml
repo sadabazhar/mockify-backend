@@ -33,6 +33,12 @@ app:
       secure: false          # HTTP allowed (localhost)
       same-site: Lax         # Works well for same-site dev
 
+    sandbox-token:
+      name: sandbox_token
+      path: /api/sandbox
+      max-age: 86400       # 24 hours — matches hard cap
+
+
   api-key:
     secret: ${API_KEY_SECRET:your-dev-secret-key-not-for-production-use}
     max-per-organization: 10

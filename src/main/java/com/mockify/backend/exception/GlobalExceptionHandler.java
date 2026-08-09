@@ -8,9 +8,34 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    /**
+     * Handles sandbox session expiry with a machine-readable error code.
+     * Must be declared before the generic BaseException handler so Spring
+     * picks the most specific handler.
+     */
+    @ExceptionHandler(SandboxExpiredException.class)
+    public ResponseEntity<ErrorResponse> handleSandboxExpired(
+            SandboxExpiredException ex,
+            HttpServletRequest req) {
+
+        ErrorResponse response = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.GONE.value())
+                .error("Sandbox Expired")
+                .message(ex.getMessage())
+                .path(req.getRequestURI())
+                .errorCode("SANDBOX_EXPIRED")
+                .actionUrl("/api/sandbox/convert")
+                .build();
+
+        return new ResponseEntity<>(response, HttpStatus.GONE);
+    }
 
     @ExceptionHandler(BaseException.class)
     public ResponseEntity<ErrorResponse> handleBaseException(BaseException ex, HttpServletRequest req) {

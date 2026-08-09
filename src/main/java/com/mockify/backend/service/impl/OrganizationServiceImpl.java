@@ -129,13 +129,15 @@ public class OrganizationServiceImpl implements OrganizationService {
         // Validate Page size, protect from abuse
         PageableValidator.validate(pageable, 50);
 
-        Page<Organization> organizationsPage = organizationRepository.findByOwnerId(userId, pageable);
+        // isSandbox=false: sandbox orgs are internal infrastructure, not user-visible resources.
+        // A sandbox org that was converted (isSandbox=false) will correctly appear in this list.
+        Page<Organization> organizationsPage =
+                organizationRepository.findByOwnerIdAndIsSandboxFalse(userId, pageable);
 
-        log.debug("User {} fetching Orgs page={}, size={} under user: {}",
+        log.debug("User {} fetching Orgs page={}, size={}",
                 userId,
                 pageable.getPageNumber(),
-                pageable.getPageSize(),
-                userId);
+                pageable.getPageSize());
         return organizationsPage.map(organizationMapper::toResponse);
     }
 

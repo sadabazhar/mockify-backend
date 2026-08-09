@@ -131,6 +131,17 @@ mockify:
         window: 1m
         type: ip
 
+      # Sandbox provisioning — strict per-IP to prevent resource exhaustion
+      sandbox:
+        paths:
+          - /api/sandbox/start
+          - /api/sandbox/resume
+          - /api/sandbox/convert
+          - /api/sandbox/convert/verify
+        limit: 5
+        window: 1m
+        type: ip
+
       public-mock:
         paths:
           - /api/mock/**

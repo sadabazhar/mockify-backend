@@ -16,6 +16,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class User {
+
     @Id
     @GeneratedValue
     @Column(updatable = false, nullable = false)
@@ -24,14 +25,26 @@ public class User {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false, unique = true)
+    /**
+     * Nullable for GUEST (sandbox) users.
+     *
+     * Uniqueness is enforced at the DB level via a partial index
+     * (idx_users_email_unique_partial, WHERE email IS NOT NULL)
+     * rather than a JPA unique constraint — because Hibernate's
+     * @Column(unique=true) generates a blanket UNIQUE constraint
+     * which would reject two simultaneous null emails.
+     *
+     * Do NOT add unique=true here.
+     */
+    @Column(nullable = true)
     private String email;
 
     @Column(name = "email_verified", nullable = false)
     private boolean emailVerified = false;
 
+    @JsonIgnore
     @Column(name = "password")
-    private String password; // Now nullable for OAuth users
+    private String password;
 
     // Default role is USER to prevent accidental admin creation
     @Enumerated(EnumType.STRING)
@@ -62,9 +75,26 @@ public class User {
     @Column(name = "avatar_url", columnDefinition = "TEXT")
     private String avatarUrl;
 
+    /**
+     * HMAC-SHA256 hash of the sandbox opaque token.
+     * Stored as a Redis-fallback: if Redis is unavailable,
+     * sandbox token validation falls back to this column.
+     * Null for non-sandbox users.
+     */
+    @JsonIgnore
+    @Column(name = "sandbox_token_hash", length = 255)
+    private String sandboxTokenHash;
+
+    @Column(name = "sandbox_created_at")
+    private LocalDateTime sandboxCreatedAt;
+
     @JsonIgnore
     @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL)
     private Set<Organization> organizations = new HashSet<>();
+
+    // -------------------------------------------------------------------------
+    // Lifecycle
+    // -------------------------------------------------------------------------
 
     @PrePersist
     protected void onCreate() {
@@ -79,5 +109,17 @@ public class User {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    // -------------------------------------------------------------------------
+    // Role helpers
+    // -------------------------------------------------------------------------
+
+    public boolean isGuest() {
+        return UserRole.GUEST == this.role;
+    }
+
+    public boolean isRealUser() {
+        return UserRole.USER == this.role || UserRole.ADMIN == this.role;
     }
 }

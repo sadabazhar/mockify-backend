@@ -5,6 +5,8 @@ import com.mockify.backend.model.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -36,4 +38,35 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Page<User> findByRole(UserRole role, Pageable pageable);
 
     Page<User> findByEmailContainingIgnoreCaseAndRole(String email, UserRole role, Pageable pageable);
+
+    /**
+     * Find a guest user by the hash of their sandbox token.
+     * Used for Redis-fallback token validation.
+     */
+    Optional<User> findBySandboxTokenHash(String sandboxTokenHash);
+
+    /**
+     * Used by the cleanup scheduler to delete orphaned guest users
+     * (guests whose sandbox org has already been deleted).
+     */
+    @Modifying
+    @Query("""
+        DELETE FROM User u
+        WHERE u.role = com.mockify.backend.common.enums.UserRole.GUEST
+          AND NOT EXISTS (
+              SELECT 1 FROM Organization o WHERE o.owner.id = u.id
+          )
+    """)
+    int deleteOrphanedGuestUsers();
+
+    /**
+     * Admin listing — exclude GUEST accounts from user management views.
+     */
+    Page<User> findByEmailContainingIgnoreCaseAndRoleNot(
+            String email, UserRole role, Pageable pageable);
+
+    Page<User> findByRoleNot(UserRole role, Pageable pageable);
+
+    Page<User> findByEmailContainingIgnoreCaseAndRoleAndRoleNot(
+            String email, UserRole filterRole, UserRole excludeRole, Pageable pageable);
 }
